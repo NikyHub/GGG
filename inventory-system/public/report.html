@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>库存管理系统 - 报表</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2>库存管理系统 - 报表</h2>
+        <button onclick="window.location.href='/admin.html'">返回</button>
+        <button onclick="logout()">登出</button>
+        <select id="period" onchange="loadReport()">
+            <option value="weekly">最近一周</option>
+            <option value="monthly">最近一个月</option>
+        </select>
+        <canvas id="transactionChart"></canvas>
+    </div>
+
+    <script>
+        let chart;
+
+        async function loadReport() {
+            const period = document.getElementById('period').value;
+            const response = await fetch(`/api/report/transactions?period=${period}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                const transactions = data.transactions;
+
+                const productSummary = {};
+                transactions.forEach(t => {
+                    if (!productSummary[t.name]) {
+                        productSummary[t.name] = { in: 0, out: 0 };
+                    }
+                    if (t.type === 'in') {
+                        productSummary[t.name].in += t.quantity;
+                    } else {
+                        productSummary[t.name].out += t.quantity;
+                    }
+                });
+
+                const labels = Object.keys(productSummary);
+                const inData = labels.map(name => productSummary[name].in);
+                const outData = labels.map(name => productSummary[name].out);
+
+                if (chart) chart.destroy();
+                const ctx = document.getElementById('transactionChart').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: '入库数量',
+                                data: inData,
+                                backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                            },
+                            {
+                                label: '出库数量',
+                                data: outData,
+                                backgroundColor: 'rgba(255, 99, 132, 0.6)'
+                            }
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            } else {
+                alert(data.message);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            window.location.href = '/login.html';
+        }
+
+        window.addEventListener('load', () => {
+            if (!localStorage.getItem('token') || localStorage.getItem('role') !== 'admin') {
+                window.location.href = '/login.html';
+            } else {
+                loadReport();
+            }
+        });
+    </script>
+</body>
+</html>

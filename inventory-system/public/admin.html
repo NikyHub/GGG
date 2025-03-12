@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>库存管理系统 - 管理员</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>库存管理系统 - 管理员</h2>
+        <button onclick="logout()">登出</button>
+        <button onclick="window.location.href='/report.html'">查看报表</button>
+        <h3>产品管理</h3>
+        <form onsubmit="addProduct(event)">
+            <input type="text" id="name" placeholder="产品名称" required>
+            <input type="number" id="quantity" placeholder="数量" required>
+            <input type="number" id="price" placeholder="价格" required>
+            <button type="submit">添加产品</button>
+        </form>
+
+        <table id="productTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>名称</th>
+                    <th>数量</th>
+                    <th>价格</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        async function loadProducts() {
+            const response = await fetch('/api/inventory/products', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                const tbody = document.querySelector('#productTable tbody');
+                tbody.innerHTML = '';
+                data.products.forEach(product => {
+                    const row = `<tr>
+                        <td>${product.id}</td>
+                        <td><input type="text" value="${product.name}" id="name-${product.id}"></td>
+                        <td><input type="number" value="${product.quantity}" id="quantity-${product.id}"></td>
+                        <td><input type="number" value="${product.price}" id="price-${product.id}"></td>
+                        <td>
+                            <button onclick="updateProduct(${product.id})">更新</button>
+                            <button onclick="deleteProduct(${product.id})">删除</button>
+                        </td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                });
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function addProduct(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const quantity = parseInt(document.getElementById('quantity').value);
+            const price = parseFloat(document.getElementById('price').value);
+
+            const response = await fetch('/api/inventory/product', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ name, quantity, price })
+            });
+
+            const data = await response.json();
+            alert(data.message);
+            if (data.success) {
+                loadProducts();
+            }
+        }
+
+        async function updateProduct(id) {
+            const name = document.getElementById(`name-${id}`).value;
+            const quantity = parseInt(document.getElementById(`quantity-${id}`).value);
+            const price = parseFloat(document.getElementById(`price-${id}`).value);
+
+            const response = await fetch(`/api/inventory/product/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ name, quantity, price })
+            });
+
+            const data = await response.json();
+            alert(data.message);
+            if (data.success) {
+                loadProducts();
+            }
+        }
+
+        async function deleteProduct(id) {
+            const response = await fetch(`/api/inventory/product/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+
+            const data = await response.json();
+            alert(data.message);
+            if (data.success) {
+                loadProducts();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            window.location.href = '/login.html';
+        }
+
+        window.addEventListener('load', () => {
+            if (!localStorage.getItem('token') || localStorage.getItem('role') !== 'admin') {
+                window.location.href = '/login.html';
+            } else {
+                loadProducts();
+            }
+        });
+    </script>
+</body>
+</html>

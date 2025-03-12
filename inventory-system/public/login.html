@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>库存管理系统 - 登录</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>库存管理系统 - 登录</h2>
+        <form onsubmit="login(event)">
+            <input type="text" id="username" placeholder="用户名" required>
+            <input type="password" id="password" placeholder="密码" required>
+            <button type="submit">登录</button>
+        </form>
+    </div>
+
+    <script>
+        async function login(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('role', data.role);
+                    if (data.role === 'admin') {
+                        window.location.href = '/admin.html';
+                    } else {
+                        window.location.href = '/staff.html';
+                    }
+                } else {
+                    alert(data.message || '登录失败');
+                }
+            } catch (error) {
+                console.error('登录失败:', error);
+                alert('登录失败，请重试');
+            }
+        }
+
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('token');
+            const role = localStorage.getItem('role');
+            if (token) {
+                if (role === 'admin') {
+                    window.location.href = '/admin.html';
+                } else {
+                    window.location.href = '/staff.html';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
